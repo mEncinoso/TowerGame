@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title> Tower </title>
+	<script type="text/javascript" src="./assets/js/phaser.min.js"></script>
+</head>
+<body>
+<div id='scenario'>
+</div>
+
+<script type="text/javascript">
+	var scenario = new Phaser.Game(800, 600, Phaser.AUTO, 'scenario', {preload: preload, create: create, update: update, render: render });
+	var base;
+	var flat=[];
+	var spaceKey;
+	var count;
+	var y;
+	var position=0;
+	var cursors;
+	var score;
+	var bounce=0;
+	var speed=200;
+	var points=0;
+	var music;
+
+	function preload(){
+		scenario.load.image('background','./assets/images/background.png');
+		scenario.load.image('base','./assets/images/base.png');
+		scenario.load.image('flat1','./assets/images/flat1.png');
+		scenario.load.image('flat2','./assets/images/flat2.png');
+		scenario.load.audio('ambient', ['./assets/audio/ambient.mp3']);
+	}
+
+
+	function create(){
+		music=scenario.add.audio('ambient');
+		music.volume=0.5;
+		music.play();
+
+		count=1;
+		y=2905;
+
+		//Scenario: Background, Bounds, Camera
+		scenario.add.sprite(0, 0, 'background');
+		scenario.world.setBounds(0, 0, 800, 3000);
+		scenario.camera.x = 0;
+		scenario.camera.y = 2400;
+
+		showScore();
+
+		//Base, 1stBlock, Enable scenario colliding bounds, flat Physics
+		flat[0] = scenario.add.sprite(300, 2947, 'base');
+		flat[count] = scenario.add.sprite(position, 2905, 'flat2');
+
+		position=1;
+
+		scenario.physics.enable(flat, Phaser.Physics.ARCADE);
+		flat[count].body.collideWorldBounds = true;
+
+		//set velocity (x,y), return movement
+    	flat[count].body.velocity.setTo(speed,0);
+    	flat[count].body.bounce.set(1);
+
+    	//add SPACE KEY
+    	this.spaceKey = scenario.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);    	    
+	}
+
+	function update(){
+		if((flat[count].x + flat[count].width) == scenario.width){
+			bounce=1;
+		}else if(flat[count].x==0){
+			bounce=0;
+		}
+
+	    if (this.spaceKey.isDown && this.spaceKey.downDuration(10)){
+	        stopFlat();
+
+		    if(checkFlat()==false){
+		      	gameOver();
+		      	
+		    }else{
+		    	generateFlat();
+
+
+
+		    }
+
+
+	    }
+	}
+
+	function render() {
+	    //scenario.debug.cameraInfo(scenario.camera, 32, 32);
+	}
+
+	function stopFlat(){
+		flat[count].body.velocity.setTo(0,0);
+	}
+
+	function showScore(){
+		score = scenario.add.text(720, 2450, "Score:" + points + " pts", { 
+			font: "24px Arial",
+        	fill: "#000",
+    	});
+
+    	score.anchor.setTo(0.5, 0.5);
+	}
+
+	function updateText() {
+    	points++;
+    	score.setText("Score:" + points + " pts");
+	}
+
+	function generateFlat(){
+
+		if(count>5){
+			scenario.camera.y -= 42;
+			score.y -= 42;
+		}
+
+		count++;
+		y=y-42;
+		flat.push("");
+		speed+=20;
+		if(position==0){
+			flat[count] = scenario.add.sprite(position, y, 'flat2');
+			moveFlat();
+		}else{
+			position=scenario.width - flat[count-1].width;
+			flat[count] = scenario.add.sprite(position, y, 'flat1');
+			moveFlat();
+		}
+		
+		flat[count].width=flat[count-1].width;
+    	flat[count].body.bounce.set(1);
+	}
+
+	function checkFlat(){
+		if(flat[count].x+flat[count].width < flat[count-1].x || flat[count].x > flat[count-1].x+flat[count].width){
+			return false;
+		}else{
+			cutFlat();
+			updateText();
+			return true;
+		}
+	}
+
+	function moveFlat(){
+		if(position==0){
+			scenario.physics.enable(flat[count], Phaser.Physics.ARCADE);
+			flat[count].body.collideWorldBounds = true;
+    		flat[count].body.velocity.setTo(speed,0);
+			position=1;
+			bounce=0;
+		}else{
+			scenario.physics.enable(flat[count], Phaser.Physics.ARCADE);
+			flat[count].body.collideWorldBounds = true;
+			flat[count].body.velocity.setTo((speed),0);
+			position=0;
+			bounce=1;
+		}
+	}
+
+	function cutFlat(){
+
+		var right1 = flat[count].x+flat[count].width;
+		var right2 = flat[count-1].x+flat[count-1].width;
+		
+		var left1 = flat[count].x;
+		var left2 = flat[count-1].x;
+
+		if(bounce==0){
+			if(right1 > right2){
+				flat[count].width = flat[count].width - (right1 - right2) -3.5;
+			}else if(left1 < left2){
+				flat[count].width = flat[count].width - (left2 - left1);
+				flat[count].x=flat[count-1].x-3.5;
+			}
+		}else if(bounce==1){
+			if(right1 > right2){
+				flat[count].width = flat[count].width - (right1 - right2) +3.5;
+			}else if(left1 < left2){
+				flat[count].width = flat[count].width - (left2 - left1);
+				flat[count].x=flat[count-1].x+3.5;
+				bounce=0;
+			}
+		}
+	}
+
+	function gameOver(){
+		stopFlat();
+		var x=scenario.width/2;
+		score.destroy();
+		var rank="bronze";
+
+		if(points>10){
+			var rank="silver";
+		}
+
+		if(points>15){
+			var rank="gold";
+		}
+
+		if(points>20){
+			var rank="platinum";
+		}
+
+		if(points>25){
+			var rank="diamond";
+		}
+
+		if(points>30){
+			var rank="MASTER";
+		}
+
+		score = scenario.add.text(x, y-150, "Score:" + points + " pts\n Your level is: "+rank+"\n Wait to restart...", { 
+			font: "68px Arial",
+        	fill: "#000",
+        	align: "center"
+    	});
+
+    	score.anchor.setTo(0.5, 0.5);
+
+    	setTimeout(function(){
+		    flat[count].destroy();
+		},1000);
+
+		setTimeout(function(){
+		    location.reload();
+		},5000);
+	}
+
+</script>
+
+</body>
+</html>
